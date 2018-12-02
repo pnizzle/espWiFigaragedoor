@@ -1,0 +1,79 @@
+#include <ESP8266WiFi.h>
+
+const char* ssid     = "...";            // SSID to your WLAN
+const char* password = "...";    // Password to your WLAN
+
+int m1 = 5;       //relay connected to D1(note on nodemcu)/pin 5
+int m2 = 4;
+WiFiServer server(80);
+
+void setup() {
+  Serial.begin(115200);
+  delay(3000);
+
+  pinMode(m1, OUTPUT);   //pin 5
+  digitalWrite(m1, LOW);
+  pinMode(m2, OUTPUT);
+  digitalWrite(m2, LOW);//pin 4
+  // Connect to WLAN
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+  Serial.println("");
+  Serial.println("WLAN connected");
+  server.begin();
+  Serial.println("Server started");
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+
+  String website;
+  website += "HTTP/1.1 200 OK \n Content-Type: text/html\n Connection: close\n\n<!DOCTYPE HTML><html>";
+  website += "<button style=\"width:100%;font-size: 100px;\"><a href=\"/one\">door</a></button><br /></html>\n";
+  //light
+  website += "<button style=\"width:100%;font-size: 100px;\"><a href=\"/light\">light</a></button><br /></html>\n";
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+
+  // Wait until the client sends some data
+  Serial.println("client active");
+  while (!client.available()) {
+    delay(1);
+  }
+
+  // Read the first line of the request
+  String req = client.readStringUntil('\r');
+  Serial.println(req);
+  client.flush();
+
+  int val;
+  if (req.indexOf("/one") != -1) {
+    digitalWrite(m1, HIGH);
+    delay(100);
+    digitalWrite(m1, LOW);
+  }
+  else if (req.indexOf("/light") != -1) {
+    digitalWrite(m2, HIGH);
+    delay(100000);
+    digitalWrite(m2, LOW);
+  }
+  else {
+    Serial.println("Not a valid url.");
+  }
+  client.flush();
+
+  // Prepare the response - if you want to add more text do it to string s.
+  String s = website;
+
+  // Send the response to the client
+  client.print(s);
+  delay(1);
+  Serial.println("Client disonnected.");
+}
